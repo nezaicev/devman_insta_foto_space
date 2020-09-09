@@ -22,7 +22,7 @@ INSTA_PASS=my_pass
 #### Запуск
 Загрузка и постинг изображений с сервиса [[spasexdata.com]](https://spasexdata.com).
 ``` bash
-$ python main.py -r spasex
+$ python main.py -s
 
 # Результат
 Загрузка и постинг в ваш аккаунт изображений последнего вылета.
@@ -30,7 +30,7 @@ $ python main.py -r spasex
 ```
 Загрузка и постинг изображений с сервиса [[hubblesite.org]](https://hubblesite.org).
 ``` bash
-$ python main.py -r hubble
+$ python main.py -u hubble
 
 # Вы получите
 Введите название коллекции или ID изображения :
