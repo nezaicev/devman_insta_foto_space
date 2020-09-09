@@ -17,10 +17,9 @@ def download_img(url, name_img):
     urllib3.disable_warnings()
     result = requests.get(url, verify=False)
     result.raise_for_status()
-    if not os.path.exists(IMAGE_DIRECTORY):
-        os.makedirs(IMAGE_DIRECTORY)
-    with open(os.path.join(IMAGE_DIRECTORY, name_img), 'wb') as f:
-        f.write(result.content)
+    os.makedirs(IMAGE_DIRECTORY, exist_ok=True)
+    with open(os.path.join(IMAGE_DIRECTORY, name_img), 'wb') as image:
+        image.write(result.content)
 
 
 def fetch_spacex_last_launch():
@@ -53,7 +52,6 @@ def fetch_hubble_img(image_id):
         resize_img(file_name)
         return True
     else:
-        print('Not img id - {}'.format(image_id))
         return False
 
 
@@ -66,14 +64,13 @@ def fetch_hubble_collection_img(name_collection):
     url_api_hubble = URL_HUBBLE + 'images/{}'.format(name_collection)
     response = requests.get(url_api_hubble)
     response.raise_for_status()
-    list_images = response.json()
-    if list_images:
-        for img in list_images:
+    images = response.json()
+    if images:
+        for img in images:
             fetch_hubble_img(img["id"])
             print("image:", img['id'], "ok")
         return True
     else:
-        print("Not images or not this collection")
         return False
 
 
@@ -84,15 +81,15 @@ def resize_img(file_name):
         rgb_img = image.convert('RGB')
         rgb_img.save("{}/{}.jpg".format(IMAGE_DIRECTORY, file_name.split(".")[0]), format="JPEG")
     except Exception:
-        print("File {} doesn't open".format(file_name))
+        print("Файл {} не может быть прочитан".format(file_name))
 
 
-def post_img_in_insta(list_images):
-    if list_images:
+def post_img_in_insta(images, username, password):
+    if images:
         bot = Bot()
-        bot.login(username=os.getenv('INSTA_LOGIN'), password=os.getenv('INSTA_PASS'))
-        for img in list_images:
-            if img.split('.')[-1] == 'jpg':
+        bot.login(username=username, password=password)
+        for img in images:
+            if os.path.splitext(img)[1] == '.jpg':
                 bot.upload_photo(os.path.join(IMAGE_DIRECTORY, img))
 
 
@@ -101,20 +98,24 @@ def main():
     parser = argparse.ArgumentParser(
         description="Скрипт скачивает изображения, используя API ресурсов spasexdata.com и hubblesite.org и постит в Instagram."
     )
-    parser.add_argument('-r', '--resource', help='Название источника данных, пример (spacex)')
+    parser.add_argument('-s', '--spacex', help='Запрос к API  spasexdata.com', action='store_true')
+    parser.add_argument('-u', '--hubble', help='Запрос к API hubblesite.org', action='store_true')
     args = parser.parse_args()
-
     try:
-        if args.resource == 'spacex':
+        if args.spacex:
             fetch_spacex_last_launch()
-        if args.resource == 'hubble':
+            post_img_in_insta(os.listdir(IMAGE_DIRECTORY), os.getenv('INSTA_LOGIN'), os.getenv('INSTA_PASS'))
+        elif args.hubble:
             param = input("Введите название коллекции или ID изображения :")
             if param.isdigit():
-                post_img_in_insta(os.listdir(IMAGE_DIRECTORY) if fetch_hubble_img(param) else print('Not fetch img'))
+                post_img_in_insta(os.listdir(IMAGE_DIRECTORY), os.getenv('INSTA_LOGIN'),
+                                  os.getenv('INSTA_PASS')) if fetch_hubble_img(param) else print('Img not exist')
             else:
-                post_img_in_insta(os.listdir(IMAGE_DIRECTORY) if fetch_hubble_collection_img(param) else print(
-                    "Not fetch collection img"))
-
+                post_img_in_insta(os.listdir(IMAGE_DIRECTORY), os.getenv('INSTA_LOGIN'),
+                                  os.getenv('INSTA_PASS')) if fetch_hubble_collection_img(param) else print(
+                    "Коллекция не существует")
+        else:
+            print("Выберите один из источников данных -s --spacex,-u --hubble")
     except requests.exceptions.HTTPError:
         print("Запрос к ресурсу {}  завершился ошибкой".format(args.resource))
 
