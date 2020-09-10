@@ -34,7 +34,6 @@ def fetch_spacex_last_launch():
         for launch in launches:
             if launch['links']['flickr_images']:
                 collection_images = launch['links']['flickr_images']
-
     for index, url_img in enumerate(collection_images):
         download_img(url_img, 'spacex{}.jpg'.format(index))
         resize_img('spacex{}.jpg'.format(index))
@@ -79,9 +78,11 @@ def resize_img(file_name):
         image = Image.open((os.path.join(IMAGE_DIRECTORY, file_name)))
         image.thumbnail((1080, 1080))
         rgb_img = image.convert('RGB')
-        rgb_img.save("{}/{}.jpg".format(IMAGE_DIRECTORY, file_name.split(".")[0]), format="JPEG")
+        rgb_img.save("{}/{}.jpg".format(IMAGE_DIRECTORY,
+                                        file_name.split(".")[0]),
+                     format="JPEG", )
     except Exception:
-        print("Файл {} не может быть прочитан".format(file_name))
+        raise EOFError
 
 
 def post_img_in_insta(images, username, password):
@@ -95,29 +96,50 @@ def post_img_in_insta(images, username, password):
 
 def main():
     load_dotenv()
+    username_insta = os.getenv('INSTA_LOGIN')
+    password_insta = os.getenv('INSTA_PASS')
     parser = argparse.ArgumentParser(
-        description="Скрипт скачивает изображения, используя API ресурсов spasexdata.com и hubblesite.org и постит в Instagram."
+        description="Скрипт скачивает изображения, используя API ресурсов "
+                    "spasexdata.com и hubblesite.org и постит в Instagram."
     )
-    parser.add_argument('-s', '--spacex', help='Запрос к API  spasexdata.com', action='store_true')
-    parser.add_argument('-u', '--hubble', help='Запрос к API hubblesite.org', action='store_true')
+    parser.add_argument('-s',
+                        '--spacex',
+                        help='Запрос к API  spasexdata.com',
+                        action='store_true', )
+    parser.add_argument('-u',
+                        '--hubble',
+                        help='Запрос к API hubblesite.org',
+                        action='store_true', )
     args = parser.parse_args()
     try:
         if args.spacex:
             fetch_spacex_last_launch()
-            post_img_in_insta(os.listdir(IMAGE_DIRECTORY), os.getenv('INSTA_LOGIN'), os.getenv('INSTA_PASS'))
+            post_img_in_insta(images=os.listdir(IMAGE_DIRECTORY),
+                              username=username_insta,
+                              password=password_insta, )
         elif args.hubble:
             param = input("Введите название коллекции или ID изображения :")
             if param.isdigit():
-                post_img_in_insta(os.listdir(IMAGE_DIRECTORY), os.getenv('INSTA_LOGIN'),
-                                  os.getenv('INSTA_PASS')) if fetch_hubble_img(param) else print('Img not exist')
+                if fetch_hubble_img(param):
+                    post_img_in_insta(images=os.listdir(IMAGE_DIRECTORY),
+                                      username=username_insta,
+                                      password=password_insta,)
+                else:
+                    print('Img not exist')
             else:
-                post_img_in_insta(os.listdir(IMAGE_DIRECTORY), os.getenv('INSTA_LOGIN'),
-                                  os.getenv('INSTA_PASS')) if fetch_hubble_collection_img(param) else print(
-                    "Коллекция не существует")
+                if fetch_hubble_collection_img(param):
+                    post_img_in_insta(images=os.listdir(IMAGE_DIRECTORY),
+                                      username=username_insta,
+                                      password=password_insta, )
+                else:
+                    print("Коллекция не существует")
         else:
             print("Выберите один из источников данных -s --spacex,-u --hubble")
     except requests.exceptions.HTTPError:
-        print("Запрос к ресурсу {}  завершился ошибкой".format(args.resource))
+        print("Запрос к ресурсу завершился ошибкой")
+    except EOFError:
+        print("Не удается открыть файл")
+
 
 
 if __name__ == "__main__":
