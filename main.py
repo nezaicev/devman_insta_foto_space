@@ -123,7 +123,7 @@ def main():
                 if fetch_hubble_img(param):
                     post_img_in_insta(images=os.listdir(IMAGE_DIRECTORY),
                                       username=username_insta,
-                                      password=password_insta,)
+                                      password=password_insta, )
                 else:
                     print('Img not exist')
             else:
@@ -139,7 +139,6 @@ def main():
         print("Запрос к ресурсу завершился ошибкой")
     except EOFError:
         print("Не удается открыть файл")
-
 
 
 if __name__ == "__main__":
